@@ -181,7 +181,7 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
     summary_prompt = (
         f"Today's date is {today}.\n"
         f"Use this date as context when answering.\n\n"
-        f"To understand credit card benefits, use this as a base context - {context_file}\n\n"
+        # f"To understand credit card benefits, use this as a base context - {context_file}\n\n"
         f"Summarize the following information to answer the question:\n\n"
         f"Question: {question}\n\n"
         f"{combined_text}\n\n"
