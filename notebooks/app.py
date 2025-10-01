@@ -11,7 +11,7 @@ import google.generativeai as genai
 import pdfplumber
 from pathlib import Path
 import json
-
+import toml
 
 # Go one level up from Notebook/ → into Data/Cards
 BASE_FOLDER = Path("..") / "Data" / "Cards"
@@ -115,9 +115,11 @@ def refresh_chroma():
     loadchroma()
 
 # Load variables from .env
-load_dotenv()
+# load_dotenv()
+api_key = st.secrets["api"]["GOOGLE_API_KEY"]
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+# genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+genai.configure(api_key=api_key)
 models = genai.GenerativeModel("gemini-2.5-flash")
 
 from datetime import datetime
