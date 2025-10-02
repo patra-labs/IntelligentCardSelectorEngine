@@ -31,12 +31,31 @@ genai.configure(api_key=API_KEY)
 # CONFIGURATION
 # ========================
 
-BASE_FOLDER = Path("..") / "Data" / "Cards"  # PDF input folder
-OUTPUT_FOLDER = Path("..") / "output"
-OUTPUT_FOLDER.mkdir(exist_ok=True)
+from pathlib import Path
+
+# ========================
+# Folders
+# ========================
+
+# Base folder for PDFs (deployment-safe)
+BASE_FOLDER = Path(__file__).parent / "Data" / "Cards"       # PDF input folder
+if not BASE_FOLDER.exists():
+    BASE_FOLDER.mkdir(parents=True, exist_ok=True)            # Ensure folder exists
+
+# Output folder for JSONL & Chroma DB (writable in deployment)
+OUTPUT_FOLDER = Path(__file__).parent / "output"
+OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+
+# ========================
+# Files
+# ========================
 
 JSONL_OUTPUT = OUTPUT_FOLDER / "documents.jsonl"
 CHROMA_DB_PATH = OUTPUT_FOLDER / "chroma_store"
+
+# ========================
+# Chroma / Embedding settings
+# ========================
 
 COLLECTION_NAME = "card_docs"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"

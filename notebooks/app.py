@@ -18,17 +18,32 @@ import google.generativeai as genai
 # ========================
 # CONFIGURATION
 # ========================
+from pathlib import Path
 
+# ========================
 # Folders
-BASE_FOLDER = Path("..") / "Data" / "Cards"       # PDF input folder
-OUTPUT_FOLDER = Path("..") / "output"             # Output JSONL & Chroma DB
-OUTPUT_FOLDER.mkdir(exist_ok=True)
+# ========================
 
+# Base folder for PDFs (deployment-safe)
+BASE_FOLDER = Path(__file__).parent / "Data" / "Cards"       # PDF input folder
+if not BASE_FOLDER.exists():
+    BASE_FOLDER.mkdir(parents=True, exist_ok=True)            # Ensure folder exists
+
+# Output folder for JSONL & Chroma DB (writable in deployment)
+OUTPUT_FOLDER = Path(__file__).parent / "output"
+OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+
+# ========================
 # Files
+# ========================
+
 JSONL_OUTPUT = OUTPUT_FOLDER / "documents.jsonl"
 CHROMA_DB_PATH = OUTPUT_FOLDER / "chroma_store"
 
+# ========================
 # Chroma / Embedding settings
+# ========================
+
 COLLECTION_NAME = "card_docs"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 N_RESULTS = 5
@@ -48,12 +63,12 @@ models = genai.GenerativeModel("gemini-2.5-flash")
 # Today's date
 today = datetime.now().strftime("%B %d, %Y")
 
-# Base context about credit cards (used for grounding LLM)
-CONTEXT_FILE = (
-    "Credit card benefits can include cashback, travel rewards, low interest rates, "
-    "and no annual fees. Different cards offer different perks, so choose one "
-    "that aligns with your spending habits and financial goals."
-)
+# # Base context about credit cards (used for grounding LLM)
+# CONTEXT_FILE = (
+#     "Credit card benefits can include cashback, travel rewards, low interest rates, "
+#     "and no annual fees. Different cards offer different perks, so choose one "
+#     "that aligns with your spending habits and financial goals."
+# )
 
 # ========================
 # UTILITY FUNCTIONS
