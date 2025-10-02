@@ -27,31 +27,24 @@ if not API_KEY:
 
 genai.configure(api_key=API_KEY)
 
-# ========================
-# CONFIGURATION
-# ========================
-
-from pathlib import Path
 
 # ========================
 # Folders
 # ========================
 
 # Base folder for PDFs (deployment-safe)
-BASE_FOLDER = Path(__file__).parent / "Data" / "Cards"       # PDF input folder
+BASE_FOLDER = Path("..") / "Data" / "Cards"       # PDF input folder
 if not BASE_FOLDER.exists():
     BASE_FOLDER.mkdir(parents=True, exist_ok=True)            # Ensure folder exists
 
-# Output folder for JSONL & Chroma DB (writable in deployment)
-OUTPUT_FOLDER = Path(__file__).parent / "output"
-OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+# Output folder (relative to Notebook/)
+OUTPUT_FOLDER = Path("..") / "output"
+OUTPUT_FOLDER.mkdir(exist_ok=True)  # create folder if it doesn’t exist
 
-# ========================
-# Files
-# ========================
-
-JSONL_OUTPUT = OUTPUT_FOLDER / "documents.jsonl"
-CHROMA_DB_PATH = OUTPUT_FOLDER / "chroma_store"
+# ---------------- SETTINGS ----------------
+JSONL_FILE = Path("..") / "output" / "documents.jsonl"  # adjust path from Notebook/
+CHROMA_DB_PATH = Path("..") / "output" / "chroma_store"
+COLLECTION_NAME = "card_docs"
 
 # ========================
 # Chroma / Embedding settings
@@ -195,7 +188,8 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
         f"Question: {question}\n\n"
         f"{combined_text}\n\n"
         f"Provide bullet-point recommendations, order cards by relevance, keep concise.\n"
-        f"Enhance with latest tips from the web on maximizing credit card cashback."
+        f"limit the context to the available information.\n"
+        f" No outside information to be added.\n"
     )
 
     response = models.generate_content(
@@ -209,7 +203,9 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
         )
     )
 
-    return combined_text, response.text.strip()
+    summary = response.text.strip()
+
+    return combined_text, summary
 
 # ========================
 # STREAMLIT APP
@@ -237,15 +233,15 @@ st.markdown(
 
 
 # Sidebar: commented out staging
-# st.sidebar.header("Chroma DB Options")
-# uploaded_files = st.sidebar.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
-# if st.sidebar.button("Upload Files"):
-#     if uploaded_files:
-#         st.sidebar.success(f"{len(uploaded_files)} uploaded")
-#     else:
-#         st.sidebar.warning("No files selected")
-# if st.sidebar.button("Refresh Chroma DB"):
-#     refresh_chroma()
+st.sidebar.header("Chroma DB Options")
+uploaded_files = st.sidebar.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
+if st.sidebar.button("Upload Files"):
+    if uploaded_files:
+        st.sidebar.success(f"{len(uploaded_files)} uploaded")
+    else:
+        st.sidebar.warning("No files selected")
+if st.sidebar.button("Refresh Chroma DB"):
+    refresh_chroma()
 
 st.sidebar.markdown("---")
 st.sidebar.info("Tool helps maximize cashback with recommendations.")
