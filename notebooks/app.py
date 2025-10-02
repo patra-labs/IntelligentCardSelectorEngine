@@ -182,8 +182,7 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
         f"{combined_text}\n\n"
         f"Provide a short, clear recommendation as bullet points. "
         f"Order multiple cards by relevance and keep it concise."
-        f"Additionally, enhance the answer with the latest tips on maximizing credit card cashback."
-
+        f"limit the summary to provided text, not from outside knowledge.\n"
     )
 
     response = models.generate_content(
