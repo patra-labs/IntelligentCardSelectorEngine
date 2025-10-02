@@ -222,10 +222,10 @@ st.set_page_config(
     page_icon="💳",
     layout="centered"
 )
-
+IMAGE_DIR = Path(__file__).parent
+IMAGE_PATH = IMAGE_DIR / "Logo_for_app.png"
 st.image(
-    "Logo_for_app.png",
-    caption="Maximize cashback effortlessly",
+    str(IMAGE_PATH),
     width="content"  # Updated parameter
 )
 
