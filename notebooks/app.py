@@ -238,20 +238,6 @@ st.markdown(
 # File upload and Chroma DB refresh functionality is currently disabled.
 # The database is expected to be preloaded with card PDFs in ../Data/Cards.
 # ==================
-# ============TRIAL 1==========
-# Sidebar: commented out staging
-st.sidebar.header("Chroma DB Options")
-uploaded_files = st.sidebar.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
-if st.sidebar.button("Upload Files"):
-    if uploaded_files:
-        st.sidebar.success(f"{len(uploaded_files)} uploaded")
-    else:
-        st.sidebar.warning("No files selected")
-if st.sidebar.button("Refresh Chroma DB"):
-    refresh_chroma()
-    st.sidebar.success("Chroma DB refreshed")
-# ============================
-
 
 # User input
 user_question = st.text_area("Type your question here...", height=100)
