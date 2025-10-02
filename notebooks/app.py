@@ -192,7 +192,7 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
             {"role": "user", "parts": summary_prompt}
         ],
         generation_config=genai.types.GenerationConfig(
-            max_output_tokens=300,
+            max_output_tokens=500,
             temperature=0.7
         )
     )
@@ -219,12 +219,6 @@ st.markdown(
     """
 )
 
-# Friendly illustrative image
-st.image(
-    "https://images.unsplash.com/photo-1573164574396-2280a5dbb40f?fit=crop&w=600&h=400",
-    caption="Maximize cashback effortlessly",
-    use_column_width=True
-)
 
 # ===== NOTE =====
 # File upload and Chroma DB refresh functionality is currently disabled.

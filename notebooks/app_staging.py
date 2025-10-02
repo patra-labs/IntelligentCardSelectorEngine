@@ -1,5 +1,5 @@
 # ========================
-# APP: Intelligent Card Selector Engine
+# APP: Intelligent Card Selector Engine (Staging)
 # Author: Soumya Patra
 # ========================
 
@@ -8,41 +8,41 @@ import json
 import textwrap
 from pathlib import Path
 from datetime import datetime
+from dotenv import load_dotenv  # <-- Load environment variables
 
 import streamlit as st
 import chromadb
 from chromadb.utils import embedding_functions
 import pdfplumber
 import google.generativeai as genai
-from dotenv import load_dotenv
+
+# ========================
+# LOAD ENV VARIABLES
+# ========================
+load_dotenv()  # Load variables from .env in project root
+API_KEY = os.getenv("GOOGLE_API_KEY")  # Make sure your .env has GOOGLE_API_KEY=...
+
+if not API_KEY:
+    st.error("⚠️ GOOGLE_API_KEY not found in .env file.")
+
+genai.configure(api_key=API_KEY)
 
 # ========================
 # CONFIGURATION
 # ========================
 
-# Load environment variables from .env
-load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    st.error("⚠️ Google API Key not found in .env")
-genai.configure(api_key=api_key)
-
-# Folders
-BASE_FOLDER = Path("..") / "Data" / "Cards"       # PDF input folder
-OUTPUT_FOLDER = Path("..") / "output"             # Output JSONL & Chroma DB
+BASE_FOLDER = Path("..") / "Data" / "Cards"  # PDF input folder
+OUTPUT_FOLDER = Path("..") / "output"
 OUTPUT_FOLDER.mkdir(exist_ok=True)
 
-# Files
 JSONL_OUTPUT = OUTPUT_FOLDER / "documents.jsonl"
 CHROMA_DB_PATH = OUTPUT_FOLDER / "chroma_store"
 
-# Chroma / Embedding settings
 COLLECTION_NAME = "card_docs"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 N_RESULTS = 5
 TEXT_WIDTH = 80
 
-# Chunking settings
 CHUNK_SIZE = 300
 CHUNK_OVERLAP = 100
 
@@ -64,14 +64,12 @@ CONTEXT_FILE = (
 # ========================
 
 def extract_text_by_page(pdf_path: Path):
-    """Yield text page by page from a PDF file."""
     with pdfplumber.open(pdf_path) as pdf:
         for page_num, page in enumerate(pdf.pages, start=1):
             text = page.extract_text() or ""
             yield page_num, text.strip()
 
 def chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
-    """Split text into overlapping chunks."""
     words = text.split()
     chunks = []
     for i in range(0, len(words), chunk_size - overlap):
@@ -81,18 +79,15 @@ def chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     return chunks
 
 def savejsonl():
-    """Read all PDFs, split into chunks, and save as JSONL."""
     with open(JSONL_OUTPUT, "w", encoding="utf-8") as f:
         for pdf_file in BASE_FOLDER.rglob("*.pdf"):
             for page_num, page_text in extract_text_by_page(pdf_file):
                 if not page_text:
                     continue
-
                 chunks = chunk_text(page_text)
-
                 for chunk_idx, chunk in enumerate(chunks):
-                    card_name = pdf_file.parents[1].name  # e.g., DiscoverIt
-                    date = pdf_file.parents[0].name       # e.g., 2025-09-01
+                    card_name = pdf_file.parents[1].name
+                    date = pdf_file.parents[0].name
                     record = {
                         "card": card_name,
                         "date": date,
@@ -105,7 +100,6 @@ def savejsonl():
                     f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 def loadchroma():
-    """Load JSONL into Chroma DB with embeddings."""
     client = chromadb.PersistentClient(path=str(CHROMA_DB_PATH))
     embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
         model_name=EMBEDDING_MODEL_NAME
@@ -114,7 +108,6 @@ def loadchroma():
         name=COLLECTION_NAME,
         embedding_function=embedding_fn
     )
-
     with open(JSONL_OUTPUT, "r", encoding="utf-8") as f:
         for line in f:
             record = json.loads(line)
@@ -136,9 +129,10 @@ def loadchroma():
             )
 
 def refresh_chroma():
-    """Refresh Chroma DB by regenerating JSONL and loading embeddings."""
-    savejsonl()
-    loadchroma()
+    # STAGING: Commented out for now
+    # savejsonl()
+    # loadchroma()
+    pass
 
 # ========================
 # CONNECT TO CHROMA
@@ -158,18 +152,16 @@ collection = client.get_or_create_collection(
 # ========================
 
 def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = TEXT_WIDTH):
-    """Query Chroma DB and generate concise summary using Gemini 2.5 Flash."""
     results = collection.query(
         query_texts=[question],
         n_results=n_results,
         include=["metadatas", "documents", "distances"]
     )
 
-    # Combine and format results
     combined_text = ""
     for idx, doc in enumerate(results['documents'][0]):
         metadata = results['metadatas'][0][idx]
-        score = 1 - results['distances'][0][idx]  # higher = more relevant
+        score = 1 - results['distances'][0][idx]
         header = (
             f"[Card: {metadata['card']} | Date: {metadata['date']} | "
             f"File: {metadata['filename']} | Page: {metadata['page']} | "
@@ -178,19 +170,18 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
         wrapped_text = textwrap.fill(doc, width=width)
         combined_text += f"{header}\n{wrapped_text}\n\n"
 
-    # Prompt for LLM
     summary_prompt = (
         f"Today's date is {today}.\n"
         f"Summarize the following information to answer the question:\n\n"
         f"Question: {question}\n\n"
         f"{combined_text}\n\n"
-        f"Provide a short, clear recommendation as bullet points. "
-        f"Order multiple cards by relevance and keep it concise."
+        f"Provide bullet-point recommendations, order cards by relevance, keep concise.\n"
+        f"Enhance with latest tips from the web on maximizing credit card cashback."
     )
 
     response = models.generate_content(
         [
-            {"role": "model", "parts": "You summarize credit card benefits clearly and concisely."},
+            {"role": "model", "parts": "Summarize credit card benefits concisely."},
             {"role": "user", "parts": summary_prompt}
         ],
         generation_config=genai.types.GenerationConfig(
@@ -206,36 +197,39 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
 # ========================
 
 st.set_page_config(
-    page_title="Intelligent Card Selector Engine",
+    page_title="Intelligent Card Selector Engine (Staging)",
     page_icon="💳",
     layout="centered"
 )
 
-# Sidebar: Chroma DB options
-st.sidebar.header("Chroma DB Options")
-
-uploaded_files = st.sidebar.file_uploader(
-    "Upload PDF files to add to Chroma DB",
-    type=["pdf"],
-    accept_multiple_files=True
+st.title("💳 Intelligent Card Selector Engine (Staging)")
+st.markdown(
+    """
+    Test credit card recommendations and cashback maximization.
+    """
 )
 
-if st.sidebar.button("Upload Files"):
-    if uploaded_files:
-        st.sidebar.success(f"✅ {len(uploaded_files)} file(s) uploaded (demo).")
-    else:
-        st.sidebar.warning("⚠️ No files selected.")
+# # Friendly image for staging app
+# st.image(
+#     "Logo_for_app.png",
+#     caption="Maximize cashback effortlessly",
+#     width="content"  # Updated parameter
+# )
 
-if st.sidebar.button("Refresh Chroma DB"):
-    refresh_chroma()
-    st.sidebar.success("✅ Chroma DB refreshed.")
+
+# Sidebar: commented out staging
+# st.sidebar.header("Chroma DB Options")
+# uploaded_files = st.sidebar.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
+# if st.sidebar.button("Upload Files"):
+#     if uploaded_files:
+#         st.sidebar.success(f"{len(uploaded_files)} uploaded")
+#     else:
+#         st.sidebar.warning("No files selected")
+# if st.sidebar.button("Refresh Chroma DB"):
+#     refresh_chroma()
 
 st.sidebar.markdown("---")
-st.sidebar.info("This is a demo tool. Backend functionality will be added in future versions.")
-
-# Main UI
-st.title("💳 Intelligent Card Selector Engine")
-st.markdown("**Demo Tool**  \nAsk questions about credit cards to get recommendations.")
+st.sidebar.info("Tool helps maximize cashback with recommendations.")
 
 user_question = st.text_area("Type your question here...", height=100)
 
@@ -246,7 +240,6 @@ if st.button("Get Answer"):
     else:
         st.warning("⚠️ Please type a question.")
 
-# Footer
 st.markdown("---")
 st.markdown(
     """
