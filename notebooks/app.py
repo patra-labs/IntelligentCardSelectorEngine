@@ -230,6 +230,7 @@ user_question = st.text_area("Type your question here...", height=100)
 if st.button("Get Answer"):
     if user_question.strip():
         combined_text, answer = query_and_summarize(user_question)
+        st.success(combined_text)
         st.success(answer)
     else:
         st.warning("⚠️ Please type a question.")
