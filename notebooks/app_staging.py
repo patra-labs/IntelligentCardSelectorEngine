@@ -14,10 +14,18 @@ import chromadb
 from chromadb.utils import embedding_functions
 import pdfplumber
 import google.generativeai as genai
+from dotenv import load_dotenv
 
 # ========================
 # CONFIGURATION
 # ========================
+
+# Load environment variables from .env
+load_dotenv()
+api_key = os.getenv("GOOGLE_API_KEY")
+if not api_key:
+    st.error("⚠️ Google API Key not found in .env")
+genai.configure(api_key=api_key)
 
 # Folders
 BASE_FOLDER = Path("..") / "Data" / "Cards"       # PDF input folder
@@ -38,17 +46,13 @@ TEXT_WIDTH = 80
 CHUNK_SIZE = 300
 CHUNK_OVERLAP = 100
 
-# Load Google API Key from Streamlit secrets
-api_key = st.secrets["api"]["GOOGLE_API_KEY"]
-genai.configure(api_key=api_key)
-
 # Gemini 2.5 Flash Model
 models = genai.GenerativeModel("gemini-2.5-flash")
 
 # Today's date
 today = datetime.now().strftime("%B %d, %Y")
 
-# Base context about credit cards (used for grounding LLM)
+# Base context about credit cards
 CONTEXT_FILE = (
     "Credit card benefits can include cashback, travel rewards, low interest rates, "
     "and no annual fees. Different cards offer different perks, so choose one "
@@ -182,8 +186,6 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
         f"{combined_text}\n\n"
         f"Provide a short, clear recommendation as bullet points. "
         f"Order multiple cards by relevance and keep it concise."
-        f"Additionally, enhance the answer with the latest tips on maximizing credit card cashback."
-
     )
 
     response = models.generate_content(
@@ -203,35 +205,38 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
 # STREAMLIT APP
 # ========================
 
-# Page setup
 st.set_page_config(
     page_title="Intelligent Card Selector Engine",
     page_icon="💳",
     layout="centered"
 )
 
-# Header with explanatory note
+# Sidebar: Chroma DB options
+st.sidebar.header("Chroma DB Options")
+
+uploaded_files = st.sidebar.file_uploader(
+    "Upload PDF files to add to Chroma DB",
+    type=["pdf"],
+    accept_multiple_files=True
+)
+
+if st.sidebar.button("Upload Files"):
+    if uploaded_files:
+        st.sidebar.success(f"✅ {len(uploaded_files)} file(s) uploaded (demo).")
+    else:
+        st.sidebar.warning("⚠️ No files selected.")
+
+if st.sidebar.button("Refresh Chroma DB"):
+    refresh_chroma()
+    st.sidebar.success("✅ Chroma DB refreshed.")
+
+st.sidebar.markdown("---")
+st.sidebar.info("This is a demo tool. Backend functionality will be added in future versions.")
+
+# Main UI
 st.title("💳 Intelligent Card Selector Engine")
-st.markdown(
-    """
-    This app helps you instantly determine which credit card to use to maximize cashback and rewards.
-    No more guessing in the store! Simply type your spending scenario and get a ranked recommendation.
-    """
-)
+st.markdown("**Demo Tool**  \nAsk questions about credit cards to get recommendations.")
 
-# Friendly illustrative image
-st.image(
-    "https://images.unsplash.com/photo-1573164574396-2280a5dbb40f?fit=crop&w=600&h=400",
-    caption="Maximize cashback effortlessly",
-    use_column_width=True
-)
-
-# ===== NOTE =====
-# File upload and Chroma DB refresh functionality is currently disabled.
-# The database is expected to be preloaded with card PDFs in ../Data/Cards.
-# ==================
-
-# User input
 user_question = st.text_area("Type your question here...", height=100)
 
 if st.button("Get Answer"):
