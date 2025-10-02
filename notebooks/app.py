@@ -206,8 +206,8 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
             {"role": "user", "parts": summary_prompt}
         ],
         generation_config=genai.types.GenerationConfig(
-            max_output_tokens=500,
-            temperature=0.7
+            max_output_tokens=3000,
+            temperature=0.2
         )
     )
 
@@ -217,40 +217,57 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
 # STREAMLIT APP
 # ========================
 
-# Page setup
 st.set_page_config(
-    page_title="Intelligent Card Selector Engine",
+    page_title="Intelligent Card Selector Engine (Staging)",
     page_icon="💳",
     layout="centered"
 )
 
-# Header with explanatory note
-st.title("💳 Intelligent Card Selector Engine")
+st.image(
+    "Logo_for_app.png",
+    caption="Maximize cashback effortlessly",
+    width="content"  # Updated parameter
+)
+
 st.markdown(
     """
-    This app helps you instantly determine which credit card to use to maximize cashback and rewards.
-    No more guessing in the store! Simply type your spending scenario and get a ranked recommendation.
+    # ✨ Smart Card Advisor  
+
+    Welcome! 👋  
+    Simply share **what you're buying** and **where you're shopping**,  
+    and we'll tell you the **best credit card** to use.  
+
+    💳 Maximize **cashback, rewards, and perks** with every purchase.  
+    💡 Plus, get **extra tips & recommendations** so you never miss out.  
     """
 )
 
+# Sidebar: commented out staging
+st.sidebar.header("Chroma DB Options")
+uploaded_files = st.sidebar.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
+if st.sidebar.button("Upload Files"):
+    if uploaded_files:
+        st.sidebar.success(f"{len(uploaded_files)} uploaded")
+    else:
+        st.sidebar.warning("No files selected")
+if st.sidebar.button("Refresh Chroma DB"):
+    refresh_chroma()
 
-# ===== NOTE =====
-# File upload and Chroma DB refresh functionality is currently disabled.
-# The database is expected to be preloaded with card PDFs in ../Data/Cards.
-# ==================
+st.sidebar.markdown("---")
+st.sidebar.info("Tool helps maximize cashback with recommendations.")
 
-# User input
 user_question = st.text_area("Type your question here...", height=100)
 
 if st.button("Get Answer"):
     if user_question.strip():
-        combined_text, answer = query_and_summarize(user_question)
-        st.success(combined_text)
-        st.success(answer)
+        try:
+            combined_text, answer = query_and_summarize(user_question)
+            st.success(answer)
+        except ValueError:
+            answer = "⚠️ The model did not return a valid text response."
     else:
         st.warning("⚠️ Please type a question.")
 
-# Footer
 st.markdown("---")
 st.markdown(
     """

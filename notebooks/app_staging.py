@@ -50,7 +50,6 @@ COLLECTION_NAME = "card_docs"
 # Chroma / Embedding settings
 # ========================
 
-COLLECTION_NAME = "card_docs"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 N_RESULTS = 5
 TEXT_WIDTH = 80
@@ -63,13 +62,6 @@ models = genai.GenerativeModel("gemini-2.5-flash")
 
 # Today's date
 today = datetime.now().strftime("%B %d, %Y")
-
-# Base context about credit cards
-CONTEXT_FILE = (
-    "Credit card benefits can include cashback, travel rewards, low interest rates, "
-    "and no annual fees. Different cards offer different perks, so choose one "
-    "that aligns with your spending habits and financial goals."
-)
 
 # ========================
 # UTILITY FUNCTIONS
@@ -91,7 +83,7 @@ def chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     return chunks
 
 def savejsonl():
-    with open(JSONL_OUTPUT, "w", encoding="utf-8") as f:
+    with open(JSONL_FILE, "w", encoding="utf-8") as f:
         for pdf_file in BASE_FOLDER.rglob("*.pdf"):
             for page_num, page_text in extract_text_by_page(pdf_file):
                 if not page_text:
@@ -120,7 +112,7 @@ def loadchroma():
         name=COLLECTION_NAME,
         embedding_function=embedding_fn
     )
-    with open(JSONL_OUTPUT, "r", encoding="utf-8") as f:
+    with open(JSONL_FILE, "r", encoding="utf-8") as f:
         for line in f:
             record = json.loads(line)
             chunk_id = (
@@ -141,10 +133,8 @@ def loadchroma():
             )
 
 def refresh_chroma():
-    # STAGING: Commented out for now
-    # savejsonl()
-    # loadchroma()
-    pass
+    savejsonl()
+    loadchroma()
 
 # ========================
 # CONNECT TO CHROMA
@@ -198,8 +188,8 @@ def query_and_summarize(question: str, n_results: int = N_RESULTS, width: int = 
             {"role": "user", "parts": summary_prompt}
         ],
         generation_config=genai.types.GenerationConfig(
-            max_output_tokens=300,
-            temperature=0.7
+            max_output_tokens=3000,
+            temperature=0.2
         )
     )
 
@@ -217,20 +207,24 @@ st.set_page_config(
     layout="centered"
 )
 
-st.title("💳 Intelligent Card Selector Engine (Staging)")
-st.markdown(
-    """
-    Test credit card recommendations and cashback maximization.
-    """
+st.image(
+    "Logo_for_app.png",
+    caption="Maximize cashback effortlessly",
+    width="content"  # Updated parameter
 )
 
-# # Friendly image for staging app
-# st.image(
-#     "Logo_for_app.png",
-#     caption="Maximize cashback effortlessly",
-#     width="content"  # Updated parameter
-# )
+st.markdown(
+    """
+    # ✨ Smart Card Advisor  
 
+    Welcome! 👋  
+    Simply share **what you're buying** and **where you're shopping**,  
+    and we'll tell you the **best credit card** to use.  
+
+    💳 Maximize **cashback, rewards, and perks** with every purchase.  
+    💡 Plus, get **extra tips & recommendations** so you never miss out.  
+    """
+)
 
 # Sidebar: commented out staging
 st.sidebar.header("Chroma DB Options")
@@ -250,8 +244,11 @@ user_question = st.text_area("Type your question here...", height=100)
 
 if st.button("Get Answer"):
     if user_question.strip():
-        combined_text, answer = query_and_summarize(user_question)
-        st.success(answer)
+        try:
+            combined_text, answer = query_and_summarize(user_question)
+            st.success(answer)
+        except ValueError:
+            answer = "⚠️ The model did not return a valid text response."
     else:
         st.warning("⚠️ Please type a question.")
 
